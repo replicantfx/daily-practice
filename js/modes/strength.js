@@ -42,11 +42,13 @@ moves:[
 /* ---- lower body ---- */
 {id:"s_squat",name:"Squat",fam:"Lower body",view:"side",tags:["legs","glutes"],
  base:Object.assign({},STAND,{kL:[1,.2],kR:[1,.2]}),keys:[{uaL:14,laL:18,uaR:16,laR:20},{hx:-15,hy:42,torso:146,neck:158,uaL:88,laL:88,uaR:90,laR:90}],beats:[3,4],breath:["in","out"],
+ alt:{view:"front",base:{fL:[-17,0],fR:[17,0],kL:[-1,.2],kR:[1,.2],ehL:[-1,0],ehR:[1,0]},keys:[{hL:[-20,84],hR:[20,84]},{hy:44,tls:.83,hL:[-8,76],hR:[8,76]}]},
  setup:"Stand with the feet a little wider than the hips, toes turned slightly out. Sit the hips back and down as the arms reach forward.",
  cues:["Knees follow the toes, and the heels stay down.","Go only as low as you can with a long back.","Breathe out and press the floor away to stand."],
  about:"The fundamental lower-body exercise. Strengthens the thighs, glutes and the core that keeps you upright."},
 {id:"s_goblet",name:"Goblet Squat",fam:"Lower body",view:"side",tags:["legs","glutes","weights"],
  base:Object.assign({},STAND,{kL:[1,.2],kR:[1,.2],db:1,ehL:[0,-1],ehR:[0,-1]}),keys:[{hL:[15,114],hR:[16,114]},{hx:-15,hy:42,torso:146,neck:158,hL:[25,72],hR:[26,72]}],beats:[3,4],breath:["in","out"],
+ alt:{view:"front",base:{fL:[-17,0],fR:[17,0],kL:[-1,.2],kR:[1,.2],ehL:[-1,-.4],ehR:[1,-.4],db:1},keys:[{hL:[-3,112],hR:[3,112]},{hy:44,tls:.83,hL:[-3,72],hR:[3,72]}]},
  setup:"Hold one dumbbell upright against the chest with both hands. Feet a little wider than the hips.",
  cues:["Keep the weight close to the chest the whole time.","Elbows travel down inside the knees.","Breathe out and drive up through the whole foot."],
  about:"Holding a weight in front makes it easier to stay upright, so the goblet squat is a great way to learn squatting with load."},

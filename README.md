@@ -11,7 +11,7 @@ Each mode has a new daily session on a weekly rhythm (in short, standard or long
 
 ## The voice
 
-The coach speaks with a pre-recorded neural voice instead of the phone's built-in speech, so it sounds the same, calm voice on every device. Every sentence the app can say is recorded once (`voice/*.mp3`, about 1,400 short clips) with [Kokoro](https://github.com/hexgrad/kokoro), an open (Apache-2.0) text-to-speech model that runs locally. Clips download as a session needs them and are cached for offline use; **Save voice offline** in the header downloads a whole mode at once. Any sentence without a recording falls back to the device voice, and **Voice: calm / device** switches between the two.
+The coach speaks with a pre-recorded neural voice instead of the phone's built-in speech, so it sounds the same, calm voice on every device. Every sentence the app can say is recorded once (`voice/*.mp3`, about 1,400 short clips) with [Kokoro](https://github.com/hexgrad/kokoro), an open (Apache-2.0) text-to-speech model that runs locally. Clips download as a session needs them and are cached for offline use; The **Voice** button in the header opens a panel to choose the calm voice or the device voice and to save any mode for offline use. Any sentence without a recording falls back to the device voice.
 
 After changing any spoken text (cues, setups, names, presence prompts), record the new sentences:
 
@@ -24,7 +24,7 @@ Only new sentences are recorded; ones the app no longer says are deleted. `--voi
 
 ## The figures
 
-Every movement is a short list of keyframe poses (joint angles, or hand and foot targets solved with inverse kinematics) mapped onto the breath. The renderer draws a shaped figure with tapered limbs, keeps a steady camera per movement, eases through in-between keyframes without stopping, lifts feet and hands when they step, glides from one movement into the next, and lets the chest rise a little on every in-breath.
+Every movement is a short list of keyframe poses (joint angles, or hand and foot targets solved with inverse kinematics) mapped onto the breath. The renderer draws a shaped figure with tapered limbs, keeps a steady camera per movement, eases through in-between keyframes without stopping, lifts feet and hands when they step, glides from one movement into the next, and lets the chest rise a little on every in-breath. Limbs carry a thin outline so an arm or leg passing in front of the body stays readable, and a movement can add a second camera (`alt`) so it shows side and front views together, as Knee Circles, Wrist and Ankle Circles and the squats do.
 
 To check poses while authoring, open the app with `?sheet=<mode>` for a contact sheet of every movement (`&keys=1` shows the keyframes themselves, `&ids=a,b` picks movements).
 

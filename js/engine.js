@@ -94,7 +94,7 @@ function solveBody(p,view,machine){const side=view!=="front",S={};let hy=p.hy;
  const hjx=s=>p.hx+(side?0:(s==="L"?-LEN.hipW:LEN.hipW));
  /* standing feet keep the hips low enough for the legs to reach the ground */
  if(!machine)["L","R"].forEach(s=>{const f=p["f"+s];if(p["th"+s]==null&&f&&f[1]<=.5){const dx=f[0]-hjx(s);hy=Math.min(hy,Math.sqrt(Math.max(0,79.6*79.6-dx*dx))+f[1])}});
- const hip=[p.hx,hy];S.hip=hip;const tl=LEN.torso*(1+.024*(p.br||0)); /* the chest rises a little on each in-breath */
+ const hip=[p.hx,hy];S.hip=hip;const tl=LEN.torso*(p.tls??1)*(1+.024*(p.br||0)); /* tls foreshortens a torso leaning toward the viewer */ /* the chest rises a little on each in-breath */
  const td=dir(p.torso);S.nb=add(hip,td,tl);S.td=td;
  const perp=[-td[1],td[0]];const mid=add(hip,td,tl/2);S.ctrl=add(mid,perp,(p.arch||0)*2);
  const r=[td[1],-td[0]];const sb=add(S.nb,td,-3);
@@ -151,18 +151,21 @@ function hexA(col,a){const[r,g,b]=parseCol(col);return`rgba(${r},${g},${b},${a})
 function fit(c){const r=c.getBoundingClientRect();const dpr=Math.min(2.5,window.devicePixelRatio||1);const w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));
  if(c.width!==w||c.height!==h){c.width=w;c.height=h}const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,W:r.width,H:r.height}}
 /* a tapered limb: two circles joined by their outer tangents */
-function capsule(ctx,a,b,ra,rb){const dx=b[0]-a[0],dy=b[1]-a[1],d=Math.hypot(dx,dy);ctx.beginPath();
- if(d<Math.abs(ra-rb)+.01){const r=Math.max(ra,rb),p=ra>=rb?a:b;ctx.arc(p[0],p[1],r,0,Math.PI*2);ctx.fill();return}
+function capsule(ctx,a,b,ra,rb,stroke){const done=()=>stroke?ctx.stroke():ctx.fill();const dx=b[0]-a[0],dy=b[1]-a[1],d=Math.hypot(dx,dy);ctx.beginPath();
+ if(d<Math.abs(ra-rb)+.01){const r=Math.max(ra,rb),p=ra>=rb?a:b;ctx.arc(p[0],p[1],r,0,Math.PI*2);done();return}
  const ang=Math.atan2(dy,dx),k=Math.asin((ra-rb)/d),P=Math.PI;
- ctx.arc(a[0],a[1],ra,ang+P/2+k,ang+3*P/2-k);ctx.arc(b[0],b[1],rb,ang-P/2-k,ang+P/2+k);ctx.closePath();ctx.fill()}
+ ctx.arc(a[0],a[1],ra,ang+P/2+k,ang+3*P/2-k);ctx.arc(b[0],b[1],rb,ang-P/2-k,ang+P/2+k);ctx.closePath();done()}
 /* opt: pad, ring (progress 0–1), ghost (next pose), thumb, breath (0–1 chest rise), frame, alpha, keep (draw over) */
-function drawScene(c,m,pose,opt={}){const{ctx,W,H}=fit(c);if(W<2)return;if(!opt.keep)ctx.clearRect(0,0,W,H);
- const fr=opt.frame||frameOf(m),pad=opt.pad??1,ring=opt.ring!=null?14:0;
- const s=Math.min(W/(fr.x1-fr.x0),(H-ring)/(fr.y1-fr.y0))*pad;const cx=W/2-(fr.x0+fr.x1)/2*s,gy=(H-ring)/2+(fr.y0+fr.y1)/2*s;
+function drawScene(c,m,pose,opt={}){const F=fit(c),ctx=F.ctx,H=F.H;if(F.W<2)return;if(!opt.keep)ctx.clearRect(0,0,F.W,H);
+ /* opt.box draws into one slice of the canvas, for side-by-side views */
+ const bx=opt.box||{x:0,w:F.W},W=bx.w;
+ const fr=opt.frame||frameOf(m),pad=opt.pad??1,ring=opt.ring!=null?14:0,top=opt.label?14:0;
+ const s=Math.min(W/(fr.x1-fr.x0),(H-ring-top)/(fr.y1-fr.y0))*pad;const cx=bx.x+W/2-(fr.x0+fr.x1)/2*s,gy=top+(H-ring-top)/2+(fr.y0+fr.y1)/2*s;
  const T=pt=>[cx+pt[0]*s,gy-pt[1]*s];
- ctx.save();ctx.globalAlpha=opt.alpha??1;
+ ctx.save();ctx.globalAlpha=opt.alpha??1;if(opt.box){ctx.beginPath();ctx.rect(bx.x,0,W,H);ctx.clip()}
+ if(opt.label){ctx.fillStyle=COL.muted;ctx.font="700 10px Figtree,system-ui,sans-serif";ctx.textAlign="center";ctx.fillText(opt.label,bx.x+W/2,14)}
  /* progress along the bottom edge */
- if(opt.ring!=null&&!opt.keep){const y=H-6,x0=18,x1=W-18;ctx.lineCap="round";ctx.lineWidth=3;ctx.strokeStyle=COL.line;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ if(opt.ring!=null&&!opt.keep){const y=H-6,x0=18,x1=F.W-18;ctx.lineCap="round";ctx.lineWidth=3;ctx.strokeStyle=COL.line;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
   if(opt.ring>0){ctx.strokeStyle=COL.saffron;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+(x1-x0)*opt.ring,y);ctx.stroke()}}
  const sc=m.mode.scene,p=opt.breath!=null?Object.assign({},pose,{br:opt.breath}):pose;
  const S=solveM(m,p);
@@ -176,20 +179,31 @@ function drawScene(c,m,pose,opt={}){const{ctx,W,H}=fit(c);if(W<2)return;if(!opt.
   ends.forEach(e=>{const a=T(RF.pulley),b=T(e);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.beginPath();ctx.arc(b[0],b[1],3.2*s,0,Math.PI*2);ctx.stroke()})}
  if(p.glow>0&&!opt.thumb){const g=T(S.dan);const rr=(14+22*p.glow)*s;const grd=ctx.createRadialGradient(g[0],g[1],0,g[0],g[1],rr);grd.addColorStop(0,hexA(COL.jade,.38*p.glow));grd.addColorStop(1,hexA(COL.jade,0));ctx.fillStyle=grd;ctx.beginPath();ctx.arc(g[0],g[1],rr,0,Math.PI*2);ctx.fill()}
  if(opt.ghost)ghostFig(ctx,solveM(m,opt.ghost),T,s,m.view);
- figure(ctx,S,T,s,m.view,p);
+ figure(ctx,S,T,s,m.view,p,opt.bg||COL.sunk);
  ctx.restore()}
+/* movements with a second camera (m.alt) show both views side by side; thumbnails keep the first */
+const VIEWNAME={side:"SIDE",front:"FRONT"};
+function animBoth(m,t,mir){const a=animPose(m,t,mir);if(m.alt){const b=animPose(m.alt,t,mir);a.ap=b.p;a.anx=b.nx}return a}
+function drawMove(c,m,r,opt={}){if(!m.alt||opt.thumb){drawScene(c,m,r.p,Object.assign({},opt,{ghost:r.nx}));return}
+ const W=c.getBoundingClientRect().width,h=W/2,stage=opt.stage;
+ drawScene(c,m,r.p,Object.assign({},opt,{ghost:r.nx,box:{x:0,w:h},label:VIEWNAME[m.view],frame:stage?stageFrame(m):opt.frame}));
+ drawScene(c,m.alt,r.ap||m.alt.K[0],Object.assign({},opt,{ghost:r.anx,box:{x:h,w:h},label:VIEWNAME[m.alt.view],keep:true,frame:stage?stageFrame(m.alt):undefined}))}
 /* a soft contact shadow under whatever touches the ground */
 function shadow(ctx,S,T,s){const low=[S.anL,S.anR,S.toL,S.toR,S.haL,S.haR,S.knL,S.knR,S.hip,S.head].filter(q=>q[1]<14);if(!low.length)return;
  let a=1e9,b=-1e9;low.forEach(q=>{a=Math.min(a,q[0]);b=Math.max(b,q[0])});const c=T([(a+b)/2,0]),rx=((b-a)/2+12)*s,ry=3.2*s;
  const g=ctx.createRadialGradient(c[0],c[1],0,c[0],c[1],rx);g.addColorStop(0,hexA(COL.ink,.13));g.addColorStop(1,hexA(COL.ink,0));
  ctx.save();ctx.fillStyle=g;ctx.translate(c[0],c[1]);ctx.scale(1,ry/rx);ctx.beginPath();ctx.arc(0,0,rx,0,Math.PI*2);ctx.fill();ctx.restore()}
 /* the figure: tapered limbs, a shaped torso, far-side limbs in a lighter tone for depth */
-function figure(ctx,S,T,s,view,pose){const side=view!=="front",near=COL.fig,far=side?COL.figFar:COL.fig;
- const cap=(a,b,ra,rb,col)=>{ctx.fillStyle=col;capsule(ctx,T(a),T(b),ra*s,rb*s)};
- const dot=(p,r,col)=>{const q=T(p);ctx.fillStyle=col;ctx.beginPath();ctx.arc(q[0],q[1],r*s,0,Math.PI*2);ctx.fill()};
- const leg=(k,col)=>{cap(S["hj"+k],S["kn"+k],8,5.4,col);cap(S["kn"+k],S["an"+k],5.3,3.3,col);cap(S["an"+k],S["to"+k],3.4,2.3,col)};
- const bell=(k,col)=>{if(!pose.db)return;const h=S["ha"+k];if(side){dot(h,6.4,mix(col,COL.paper,.25));dot(h,3.6,col)}else{const a=[h[0]-8,h[1]],b=[h[0]+8,h[1]];cap(a,b,1.6,1.6,col);cap([a[0]-1.5,a[1]-5.5],[a[0]-1.5,a[1]+5.5],2.4,2.4,col);cap([b[0]+1.5,b[1]-5.5],[b[0]+1.5,b[1]+5.5],2.4,2.4,col)}};
- const arm=(k,col)=>{cap(S["sh"+k],S["el"+k],5,3.9,col);cap(S["el"+k],S["ha"+k],3.8,2.7,col);dot(S["ha"+k],3.5,col);bell(k,col)};
+function figure(ctx,S,T,s,view,pose,bg){const side=view!=="front",near=COL.fig,far=side?COL.figFar:COL.fig;
+ /* limbs are drawn twice: first a thin outline in the background color, then the fill, so an arm or leg in front
+    of the body (or of the other limb) stays readable instead of merging into one dark shape */
+ let pass="fill";const edge=Math.max(2.2,1.5*s);
+ const cap=(a,b,ra,rb,col)=>{if(pass==="edge"){ctx.strokeStyle=bg;ctx.lineWidth=edge;capsule(ctx,T(a),T(b),ra*s,rb*s,true)}else{ctx.fillStyle=col;capsule(ctx,T(a),T(b),ra*s,rb*s)}};
+ const dot=(p,r,col)=>{const q=T(p);ctx.beginPath();ctx.arc(q[0],q[1],r*s,0,Math.PI*2);if(pass==="edge"){ctx.strokeStyle=bg;ctx.lineWidth=edge;ctx.stroke()}else{ctx.fillStyle=col;ctx.fill()}};
+ const twice=f=>{pass="edge";f();pass="fill";f()};
+ const leg=(k,col,o)=>{const f=()=>{cap(S["hj"+k],S["kn"+k],8,5.4,col);cap(S["kn"+k],S["an"+k],5.3,3.3,col);cap(S["an"+k],S["to"+k],3.4,2.3,col)};o?twice(f):f()};
+ const bell=(k,col)=>{if(!pose.db)return;const h=S["ha"+k];if(side){dot(h,6.4,mix(col,COL.paper,.25));if(pass==="fill")dot(h,3.6,col)}else{const a=[h[0]-8,h[1]],b=[h[0]+8,h[1]];cap(a,b,1.6,1.6,col);cap([a[0]-1.5,a[1]-5.5],[a[0]-1.5,a[1]+5.5],2.4,2.4,col);cap([b[0]+1.5,b[1]-5.5],[b[0]+1.5,b[1]+5.5],2.4,2.4,col)}};
+ const arm=(k,col,o)=>{const f=()=>{cap(S["sh"+k],S["el"+k],5,3.9,col);cap(S["el"+k],S["ha"+k],3.8,2.7,col);dot(S["ha"+k],3.5,col);bell(k,col)};o?twice(f):f()};
  if(side){arm("L",far);leg("L",far)}
  /* torso: sampled along the spine curve with a waist and a chest */
  const A=S.hip,C=S.ctrl,B=S.nb,N=12,L=[],R=[];
@@ -200,12 +214,12 @@ function figure(ctx,S,T,s,view,pose){const side=view!=="front",near=COL.fig,far=
   const w=wAt(t),nx=-ty,ny=tx;L.push(T([x+nx*w,y+ny*w]));R.push(T([x-nx*w,y-ny*w]))}
  ctx.fillStyle=near;ctx.beginPath();L.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));R.reverse().forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();ctx.fill();
  dot(A,side?9.4:11.4,near);
- if(!side){cap(S.shL,S.shR,6.2,6.2,near);cap(S.hjL,S.hjR,8,8,near);leg("L",near);leg("R",near)}else{dot(B,7.4,near);leg("R",near)}
+ if(!side){cap(S.shL,S.shR,6.2,6.2,near);cap(S.hjL,S.hjR,8,8,near);leg("L",near);leg("R",near,true)}else{dot(B,7.4,near);leg("R",near,true)}
  cap(S.nb,S.ne,4.2,3.9,near);
  dot(S.head,10.6,near);
  /* a hint of a nose shows which way the head faces */
  if(side){dot(add(S.head,dir(angOf(S.nd)-90*(S.face||1)),8.6),2.6,near)}else if(Math.abs(pose.face||0)>.05){dot([S.head[0]+pose.face*8.4,S.head[1]-1.5],2.4,near)}
- if(side)arm("R",near);else{arm("L",near);arm("R",near)}}
+ if(side)arm("R",near,true);else{arm("L",near,true);arm("R",near,true)}}
 /* the next pose, drawn as a faint line figure */
 function ghostFig(ctx,S,T,s,view){ctx.save();ctx.strokeStyle=hexA(COL.jade,.42);ctx.lineWidth=Math.max(1,2.2*s);ctx.lineCap="round";ctx.lineJoin="round";
  const line=pts=>{ctx.beginPath();pts.forEach((p,i)=>{const q=T(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.stroke()};
@@ -357,7 +371,7 @@ function setupHero(){cancelAnimationFrame(heroAnim);const now=new Date(),hr=now.
  $("#heroGo").onclick=()=>player.start(heroR);$("#heroView").onclick=()=>openRoutine(heroR);
  const c=$("#heroCanvas"),m=M[heroR.feat],B=MD.BIN+MD.BOUT;
  if(reduced){staticPose(c,m,{pad:.9});return}
- const loop=now=>{if(!player.active&&!document.hidden){const t=now/1000;const half=m.sides&&(Math.floor(t/(4*B))%2===1);const{p,nx}=animPose(m,t,half);drawScene(c,m,p,{pad:.9,ghost:nx,breath:breathAmt(t)})}heroAnim=requestAnimationFrame(loop)};heroAnim=requestAnimationFrame(loop)}
+ const loop=now=>{if(!player.active&&!document.hidden){const t=now/1000;const half=m.sides&&(Math.floor(t/(4*B))%2===1);drawMove(c,m,animBoth(m,t,half),{pad:.9,breath:breathAmt(t)})}heroAnim=requestAnimationFrame(loop)};heroAnim=requestAnimationFrame(loop)}
 /* a new day while the app was left open */
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!player.active&&heroDay&&heroDay!==dkey(new Date())){setupHero();renderLog()}});
 
@@ -417,7 +431,7 @@ function openMove(m){openSheet(`<div class="pfig"><canvas id="mvC" aria-label="$
  <div class="muted" style="font-size:13px">Breath: ${breathSummary(m)}</div>
  <div><button class="btn" id="mvGo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Try it for 1 minute</button></div></div>`);
  $("#panel .x").onclick=closeSheet;$("#mvGo").onclick=()=>{closeSheet();player.start({id:"single",name:m.name,hz:hzOf(m),items:[[m.id,60]]})};
- const c=$("#mvC"),B=MD.BIN+MD.BOUT;const t0=performance.now();const f=now=>{const t=(now-t0)/1000;const half=m.sides&&(Math.floor(t/(4*B))%2===1);const{p,nx}=animPose(m,t,half);drawScene(c,m,p,{pad:.94,ghost:nx,breath:breathAmt(t)});if(!reduced)sheetAnim=requestAnimationFrame(f)};sheetAnim=requestAnimationFrame(f)}
+ const c=$("#mvC"),B=MD.BIN+MD.BOUT;const t0=performance.now();const f=now=>{const t=(now-t0)/1000;const half=m.sides&&(Math.floor(t/(4*B))%2===1);drawMove(c,m,animBoth(m,t,half),{pad:.94,breath:breathAmt(t)});if(!reduced)sheetAnim=requestAnimationFrame(f)};sheetAnim=requestAnimationFrame(f)}
 function breathSummary(m){const md=m.mode;return m.tl.kind==="tempo"?`in ${md.BIN} s, out ${md.BOUT} s, the same steady rhythm all session. The movement keeps its own tempo, ${m.tl.per>1?m.tl.per+" times":"once"} per breath`:`in ${md.BIN} s, out ${md.BOUT} s, the same steady rhythm all session. The movement follows the breath`}
 const BL={in:"Inhale",out:"Exhale",hold:"Hold",flow:"Breathe naturally",soft:"Breathe into the stretch",still:"Rest in stillness"};
 function openRoutine(base){const full=fmtMin(routineSecs(base)),keep=!["daily","custom","single"].includes(base.id),lk=MD.id+":"+base.id;
@@ -468,7 +482,7 @@ const player={active:false,segs:[],si:0,t:0,running:false,raf:0,last:0,practiced
   else nw.hidden=true;
   if(g.kind==="prep"){say(SPEECH.intro(m,g.idx===0,settings.springs),!this.arrive||g.idx!==0);prefetch(this.linesFor(g.idx+1))}
   else{bowl(.7);this.idsDone.add(m.id);this.cuePlan=planCues(g)}},
- frame(now){const dt=Math.min(.1,(now-this.last)/1000);this.last=now;
+ frame(now){const dt=Math.min(.1,(now-this.last)/1000);this.last=now;if(!this.seg())return;
   if(this.running&&this.active){const g=this.seg();const a=this.t;this.t+=dt;if(g.kind==="move")this.practiced+=dt;this.events(g,a,this.t);if(this.t>=g.dur)this.next()}
   if(this.active){this.render();this.raf=requestAnimationFrame(n=>this.frame(n))}},
  events(g,a,b){const cross=x=>a<x&&b>=x,B=MD.BIN+MD.BOUT,AB=SPEECH.ARRIVE_BREATH;
@@ -506,10 +520,11 @@ const player={active:false,segs:[],si:0,t:0,running:false,raf:0,last:0,practiced
   if(g.kind!=="move"){bi=breathPhase(this.t);const start=m.K[0];pose=start;
    /* glide from where the last movement ended into this one's starting pose; a change of view cross-fades */
    const lp=this.lastPose;if(g.kind==="prep"&&lp&&this.t<MORPH&&!reduced){const u=ease(this.t/MORPH);
-    if(lp.m.view===m.view&&lp.m.mode===m.mode){pose=lerpPose(lp.p,start,u);fr=lerpFrame(lp.fr,fr,u)}
-    else{drawScene(c,lp.m,lp.p,{pad:.8,frame:lp.fr,alpha:1-u,ring:0});drawScene(c,m,start,{pad:.8,alpha:u,keep:true,breath:breathAmt(this.t)});this.hud(g,bi);return}}}
-  else{const half=m.sides&&this.t>=g.dur/2;const lt=half?this.t-g.dur/2:this.t;const r=animPose(m,lt,half);pose=r.p;ghost=r.nx;bi=breathPhase(lt);if(m.count)bi.count=bi.n%m.count+1;this.lastPose={m,p:pose,fr}}
-  drawScene(c,m,pose,{pad:.8,ghost,frame:fr,breath:breathAmt(g.kind==="move"&&m.sides&&this.t>=g.dur/2?this.t-g.dur/2:this.t),ring:g.kind==="move"?Math.min(1,this.t/g.dur):0});
+    if(lp.m.view===m.view&&lp.m.mode===m.mode&&!lp.m.alt&&!m.alt){pose=lerpPose(lp.p,start,u);fr=lerpFrame(lp.fr,fr,u)}
+    else{drawMove(c,lp.m,{p:lp.p,ap:lp.ap},{pad:.8,frame:lp.fr,stage:true,bg:COL.paper,alpha:1-u,ring:0});drawMove(c,m,{p:start,ap:m.alt&&m.alt.K[0]},{pad:.8,stage:true,bg:COL.paper,alpha:u,keep:true,breath:breathAmt(this.t)});this.hud(g,bi);return}}}
+  else{const half=m.sides&&this.t>=g.dur/2;const lt=half?this.t-g.dur/2:this.t;const r=animBoth(m,lt,half);pose=r.p;ghost=r.nx;this.alt=r;bi=breathPhase(lt);if(m.count)bi.count=bi.n%m.count+1;this.lastPose={m,p:pose,fr,ap:r.ap}}
+  if(g.kind!=="move")this.alt={ap:m.alt&&m.alt.K[0]};
+  drawMove(c,m,{p:pose,nx:ghost,ap:this.alt.ap,anx:this.alt.anx},{pad:.8,frame:fr,stage:true,bg:COL.paper,breath:breathAmt(g.kind==="move"&&m.sides&&this.t>=g.dur/2?this.t-g.dur/2:this.t),ring:g.kind==="move"?Math.min(1,this.t/g.dur):0});
   this.hud(g,bi)},
  hud(g,bi){const m=g.m;$("#plTime").textContent=fmt(g.dur-this.t);
   let done=0;for(let i=0;i<this.si;i++)done+=this.segs[i].dur;done+=this.t;$("#plRemain").textContent=fmt(this.total-done)+" remaining";
@@ -544,15 +559,33 @@ const tb=()=>{settings.bell=!settings.bell;saveSettings();player.syncToggles();i
 const tbr=()=>{settings.breath=!settings.breath;saveSettings();player.syncToggles()};
 $("#plBreathBtn").onclick=tbr;$("#tBreath").onclick=tbr;
 $("#plVoice").onclick=tv;$("#tVoice").onclick=tv;$("#plBell").onclick=tb;$("#tBell").onclick=tb;
-/* recorded calm voice, or the device's own */
-function syncVoiceBtn(){const b=$("#tVoiceKind");b.hidden=!VO.clips;try{syncSaveBtn()}catch(e){}b.textContent=settings.voiceKind==="device"?"Voice: device":"Voice: calm";b.setAttribute("aria-label",b.textContent+". Switch voice")}
-/* download every recording the current mode uses, so its sessions can be voiced with no connection */
-function syncSaveBtn(){const b=$("#tVoiceSave");const saved=(settings.voiceSaved||{})[MD.id];b.hidden=!VO.clips||!navigator.serviceWorker||!navigator.serviceWorker.controller||settings.voiceKind==="device";
- if(!b.disabled)b.textContent=saved?`Voice saved · ${MD.name}`:`Save voice offline · ${MD.name}`}
-$("#tVoiceSave").onclick=async()=>{const b=$("#tVoiceSave"),md=MD;if(b.disabled)return;const keys=[...new Set(SPEECH.lines(md).map(SPEECH.key))].filter(k=>VO.clips[k]);const total=keys.length;let done=0,fail=0;b.disabled=true;
- const step=async()=>{while(keys.length){const k=keys.pop();try{const r=await fetch("voice/"+k+".mp3");if(!r.ok)fail++}catch(e){fail++}done++;b.textContent=`Saving voice… ${Math.round(done/total*100)}%`}};
- await Promise.all([step(),step(),step(),step()]);b.disabled=false;if(!fail){settings.voiceSaved=Object.assign({},settings.voiceSaved,{[md.id]:true});saveSettings()}syncSaveBtn();if(fail)b.textContent="Some voice files didn't download. Try again."};
-$("#tVoiceKind").onclick=()=>{settings.voiceKind=settings.voiceKind==="device"?"natural":"device";saveSettings();syncVoiceBtn();stopSpeech();say("Breathe in. And slowly out.",true,{caption:false})};
+/* ---------- the voice panel: choose the calm recorded voice or the device's own, and save modes for offline use ---------- */
+const canSave=()=>!!(VO.clips&&navigator.serviceWorker&&navigator.serviceWorker.controller);
+const saving={}; /* mode id -> progress 0..1 while downloading */
+function syncVoiceBtn(){const b=$("#tVoiceKind");b.hidden=!VO.clips;b.textContent=settings.voiceKind==="device"?"Voice: device":"Voice: calm";b.setAttribute("aria-label",b.textContent+". Voice settings");if(!$("#sheet").hidden&&$("#voicePanel"))renderVoicePanel()}
+const modeKeys=md=>[...new Set(SPEECH.lines(md).map(SPEECH.key))].filter(k=>VO.clips[k]);
+const modeMB=md=>Math.max(1,Math.round(modeKeys(md).reduce((a,k)=>a+VO.clips[k],0)*5.2/1e6));
+function renderVoicePanel(){const box=$("#voicePanel");if(!box)return;const nat=settings.voiceKind!=="device";
+ box.querySelectorAll("[data-k]").forEach(b=>b.setAttribute("aria-checked",String((b.dataset.k==="natural")===nat)));
+ const ul=$("#voiceSave");ul.innerHTML="";const ok=canSave();
+ MODES.forEach(md=>{const st=saving[md.id],saved=(settings.voiceSaved||{})[md.id];
+  const li=el("li",{},`<span><b>${esc(md.name)}</b><small>${st!=null?`Saving… ${Math.round(st*100)}%`:saved?"Saved on this device":`About ${modeMB(md)} MB`}</small></span>`);
+  const b=el("button",{type:"button",class:"chip"},st!=null?"Saving…":saved?"Update":"Save");b.disabled=!ok||st!=null||!nat;b.onclick=()=>saveVoice(md);li.appendChild(b);ul.appendChild(li)});
+ $("#voiceSaveNote").textContent=!nat?"Offline saving is for the calm voice. The device voice needs no download.":ok?"The calm voice downloads as you practice. Save a mode to use it with no connection at all.":"Saving for offline works once the app is opened from its web address or installed on your home screen."}
+async function saveVoice(md){if(saving[md.id]!=null||!canSave())return;const keys=modeKeys(md),total=keys.length;let done=0,fail=0;saving[md.id]=0;renderVoicePanel();
+ const step=async()=>{while(keys.length){const k=keys.pop();try{const r=await fetch("voice/"+k+".mp3");if(!r.ok)fail++}catch(e){fail++}done++;saving[md.id]=done/total;if(done%10===0||done===total)renderVoicePanel()}};
+ await Promise.all([step(),step(),step(),step()]);delete saving[md.id];
+ if(!fail){settings.voiceSaved=Object.assign({},settings.voiceSaved,{[md.id]:true});saveSettings()}renderVoicePanel();
+ if(fail){const n=$("#voiceSaveNote");if(n)n.textContent=`${fail} voice files didn't download. Check the connection and try again.`}}
+function openVoice(){openSheet(`<div class="pbody" id="voicePanel">${XBTN}<h2 id="sheetTitle">Voice</h2><p class="muted">Choose who guides your practice. Each plays a short sample.</p>
+ <div class="vchoice" role="radiogroup" aria-label="Voice">
+  <button type="button" role="radio" data-k="natural"><b>Calm voice</b><small>A soft recorded voice, the same on every device</small></button>
+  <button type="button" role="radio" data-k="device"><b>Device voice</b><small>Your phone or computer's built-in speech</small></button></div>
+ <div><div class="eyebrow" style="margin-bottom:6px">Use without a connection</div><p class="muted" style="font-size:13px;margin:0 0 6px" id="voiceSaveNote"></p><ul class="vsave" id="voiceSave"></ul></div></div>`,true);
+ $("#panel .x").onclick=closeSheet;
+ $("#voicePanel").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{settings.voiceKind=b.dataset.k;saveSettings();syncVoiceBtn();renderVoicePanel();stopSpeech();say("Breathe in. And slowly out.",true,{caption:false})});
+ renderVoicePanel()}
+$("#tVoiceKind").onclick=openVoice;
 document.addEventListener("keydown",e=>{
  if(player.active){if(e.key===" "){e.preventDefault();if($("#plDone").hidden)player.toggle()}else if(e.key==="ArrowRight")player.skip(1);else if(e.key==="ArrowLeft")player.skip(-1);else if(e.key==="Escape")player.close();return}
  if(!$("#sheet").hidden&&e.key==="Escape")closeSheet()});
@@ -599,9 +632,12 @@ if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol)&&!/^(localh
 
 /* ---------- start ---------- */
 MODES.forEach(md=>{md.M=Object.fromEntries(md.moves.map(m=>[m.id,m]));
- md.moves.forEach(m=>{m.mode=md;const B=m.view==="side"?SIDE:FRONT;const base=Object.assign({},B,m.base||{});m.K=m.keys.map(k=>Object.assign({},base,k));m.C=m.beats.reduce((a,b)=>a+b,0);buildTimeline(m)})});
+ md.moves.forEach(m=>{m.mode=md;const B=m.view==="side"?SIDE:FRONT;const base=Object.assign({},B,m.base||{});m.K=m.keys.map(k=>Object.assign({},base,k));m.C=m.beats.reduce((a,b)=>a+b,0);buildTimeline(m);
+  /* a second camera: the same timing, with its own keyframes drawn from the other view */
+  if(m.alt&&!m.alt.K){const a=m.alt,A=Object.assign({},m,{view:a.view,prop:a.prop,frame:null,alt:null});const b=Object.assign({},a.view==="side"?SIDE:FRONT,a.base||{});
+   A.K=a.keys.map(k=>Object.assign({},b,k));if(A.K.length!==m.K.length)console.warn("alt keys must match",m.id);m.alt=A}})});
 M=MD.M;
 player.syncToggles();syncVoiceBtn();setMode(MD.id,true);
 if(/[?&]sheet=/.test(location.search))setTimeout(()=>{const s=document.createElement("script");s.src="tools/sheet.js";document.body.appendChild(s)}); /* authoring aid */
-window.__dp={MODES,get MD(){return MD},setMode,mirror,say,solveM,poseAt,animPose,breathPhase,quant,drawScene,frameOf,player,dailyPractice,routineSecs,compose,SPEECH,VO};
+window.__dp={MODES,get MD(){return MD},setMode,mirror,say,drawMove,animBoth,solveM,poseAt,animPose,breathPhase,quant,drawScene,frameOf,player,dailyPractice,routineSecs,compose,SPEECH,VO};
 })();

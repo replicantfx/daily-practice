@@ -3,7 +3,7 @@
 // first and refresh in the background. Voice recordings are cached the first time they play (or are prefetched for a
 // session) and kept across app updates, since a recording never changes: a changed sentence gets a new file name.
 // Bump VERSION when the list of files below changes.
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `daily-practice-${VERSION}`;
 const VOICE = "daily-practice-voice";
 const FILES = [

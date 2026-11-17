@@ -152,6 +152,19 @@ input[type=range]{width:100%;accent-color:var(--saffron);height:28px}
 .saying small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .note{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px;display:flex;gap:10px;align-items:flex-start;max-width:75ch}
 
+/* voice panel */
+.vchoice{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vchoice button{text-align:left;border:1.5px solid var(--line);background:transparent;border-radius:14px;padding:12px 14px;display:grid;gap:3px}
+.vchoice button b{font-size:15px}
+.vchoice button small{color:var(--muted);font-size:12.5px;line-height:1.35}
+.vchoice button[aria-checked="true"]{border-color:var(--saffron);background:var(--saffron-soft)}
+.vchoice button[aria-checked="true"] b{color:var(--saffron)}
+.vsave{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.vsave li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.vsave li small{display:block;color:var(--muted);font-size:12px}
+.vsave .chip:disabled{opacity:.45;cursor:default}
+@media (max-width:560px){.vchoice{grid-template-columns:1fr}}
+
 /* sheet */
 .sheet{position:fixed;inset:0;z-index:40;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .panel{background:var(--surface);border-radius:22px;width:min(760px,100%);max-height:100%;overflow:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
@@ -282,7 +295,6 @@ input[type=range]{width:100%;accent-color:var(--saffron);height:28px}
       <button class="tog install" id="tInstall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/></svg>Install app</button>
       <button class="tog" id="tSprings" type="button" hidden>Springs: levels</button>
       <button class="tog" id="tVoiceKind" type="button" hidden>Voice: calm</button>
-      <button class="tog" id="tVoiceSave" type="button" hidden>Save voice offline</button>
       <button class="tog" id="tVoice" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>Voice coach</button>
       <button class="tog" id="tBreath" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9h10a3 3 0 1 0-3-3"/><path d="M3 14h15a3 3 0 1 1-3 3"/></svg>Breath coach</button>
       <button class="tog" id="tBell" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12a8 8 0 0 0 16 0z"/><path d="M12 4v3"/><path d="M7 20h10"/></svg>Chime</button>
