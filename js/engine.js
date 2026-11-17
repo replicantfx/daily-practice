@@ -204,7 +204,8 @@ function figure(ctx,S,T,s,view,pose,bg){const side=view!=="front",near=COL.fig,f
  const leg=(k,col,o)=>{const f=()=>{cap(S["hj"+k],S["kn"+k],8,5.4,col);cap(S["kn"+k],S["an"+k],5.3,3.3,col);cap(S["an"+k],S["to"+k],3.4,2.3,col)};o?twice(f):f()};
  const bell=(k,col)=>{if(!pose.db)return;const h=S["ha"+k];if(side){dot(h,6.4,mix(col,COL.paper,.25));if(pass==="fill")dot(h,3.6,col)}else{const a=[h[0]-8,h[1]],b=[h[0]+8,h[1]];cap(a,b,1.6,1.6,col);cap([a[0]-1.5,a[1]-5.5],[a[0]-1.5,a[1]+5.5],2.4,2.4,col);cap([b[0]+1.5,b[1]-5.5],[b[0]+1.5,b[1]+5.5],2.4,2.4,col)}};
  const arm=(k,col,o)=>{const f=()=>{cap(S["sh"+k],S["el"+k],5,3.9,col);cap(S["el"+k],S["ha"+k],3.8,2.7,col);dot(S["ha"+k],3.5,col);bell(k,col)};o?twice(f):f()};
- if(side){arm("L",far);leg("L",far)}
+ /* legs go behind the torso, so both hips look the same and the outline only separates the legs from each other */
+ if(side){arm("L",far);leg("L",far);leg("R",near,true)}else{leg("L",near,true);leg("R",near,true)}
  /* torso: sampled along the spine curve with a waist and a chest */
  const A=S.hip,C=S.ctrl,B=S.nb,N=12,L=[],R=[];
  const prof=side?[[0,9.6],[.42,8.2],[.74,10],[1,7.6]]:[[0,13],[.42,11.4],[.8,15.2],[1,15.6]];
@@ -214,7 +215,7 @@ function figure(ctx,S,T,s,view,pose,bg){const side=view!=="front",near=COL.fig,f
   const w=wAt(t),nx=-ty,ny=tx;L.push(T([x+nx*w,y+ny*w]));R.push(T([x-nx*w,y-ny*w]))}
  ctx.fillStyle=near;ctx.beginPath();L.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));R.reverse().forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();ctx.fill();
  dot(A,side?9.4:11.4,near);
- if(!side){cap(S.shL,S.shR,6.2,6.2,near);cap(S.hjL,S.hjR,8,8,near);leg("L",near);leg("R",near,true)}else{dot(B,7.4,near);leg("R",near,true)}
+ if(!side){cap(S.shL,S.shR,6.2,6.2,near);cap(S.hjL,S.hjR,8,8,near)}else dot(B,7.4,near);
  cap(S.nb,S.ne,4.2,3.9,near);
  dot(S.head,10.6,near);
  /* a hint of a nose shows which way the head faces */
